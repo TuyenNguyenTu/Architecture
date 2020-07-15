@@ -26,9 +26,9 @@
               <td>{{ format_date(record.createdDate) }}</td>
               <td>
                 {{
-                  record.modifiedDate == null
-                    ? "Chưa sửa lần nào"
-                    : format_date(record.modifiedDate)
+                record.modifiedDate == null
+                ? "Chưa sửa lần nào"
+                : format_date(record.modifiedDate)
                 }}
               </td>
               <td>{{ record.status == true ? "Active" : "Block" }}</td>
@@ -36,10 +36,7 @@
                 <a href="#" @click.prevent="updateRecord(record)">Edit</a> -
                 <a href="#" @click.prevent="deleteRecord(record.id)">Delete</a>
                 -
-                <router-link
-                  :to="{ name: 'CategoryDetail', params: { id: record.id } }"
-                  >View</router-link
-                >
+                <router-link :to="{ name: 'CategoryDetail', params: { id: record.id } }">View</router-link>
               </td>
             </tr>
           </tbody>
@@ -52,12 +49,19 @@
               <b-form-input type="text" v-model="model.name"></b-form-input>
             </b-form-group>
             <b-form-group label="Description">
-              <b-form-input
-                rows="4"
-                v-model="model.description"
-                type="text"
-              ></b-form-input>
+              <b-form-input rows="4" v-model="model.description" type="text"></b-form-input>
             </b-form-group>
+            <b-form-group label="Parent">
+              <b-select v-model="model.parentId" @change="getSelectedItem">
+                <option :value="null" disabled>-- Select value --</option>
+                <option
+                  v-for="record in records"
+                  :key="record.id"
+                  :value="record.id"
+                >{{record.name}}</option>
+              </b-select>
+            </b-form-group>
+
             <div>
               <b-btn type="submit" variant="success">Save Record</b-btn>
             </div>
@@ -79,6 +83,7 @@ export default {
       model: {},
       recordsParent: [],
       parent: {},
+      modelUpdate: {}
     };
   },
   async created() {
@@ -95,13 +100,19 @@ export default {
     },
     async updateRecord(record) {
       this.model = Object.assign({}, record);
+      this.modelUpdate = await api.getById(this.model.id);
     },
     async createNewRecord() {
       const isUpdate = !!this.model.id;
       if (isUpdate) {
-        await api.update(this.model);
+        if (this.model.parentId != null) {
+          await api.update(this.model);
+        } else {
+          this.model.parentId = this.modelUpdate.parentId;
+          await api.update(this.model);
+        }
       } else {
-        console.log(await api.create(this.model));
+        console.log(this.model);
       }
       this.model = {};
       await this.getAll();
@@ -123,7 +134,13 @@ export default {
         return moment(String(value)).format("yyyy-MM-DD");
       }
     },
-  },
+    getSelectedItem(value) {
+      if (value) {
+        console.log(value);
+        this.model.parentId = value;
+      }
+    }
+  }
 };
 </script>
 
